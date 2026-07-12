@@ -1,0 +1,9 @@
+[
+  {
+    "audios": ["/path/to/example.wav"],
+    "messages": [
+      {"role": "user", "content": "<audio>Please describe this audio."},
+      {"role": "assistant", "content": "A person is speaking over quiet background music."}
+    ]
+  }
+]

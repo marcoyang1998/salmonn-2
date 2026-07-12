@@ -1,0 +1,33 @@
+{
+  "base_llm_name_or_path": "Qwen/Qwen3-8B",
+  "attn_implementation": "sdpa",
+  "model_name_or_path": "/path/to/stage1/checkpoint",
+  "model": {
+    "zipformer_checkpoint": "/path/to/zipformer2.pt",
+    "freeze_audio_encoder": true,
+    "connector_hidden_size": 4096,
+    "connector_segment_size": 5,
+    "concatenate_encoder_layers": true
+  },
+  "lora": {
+    "r": 64,
+    "lora_alpha": 64,
+    "lora_dropout": 0.05,
+    "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+  },
+  "training": {
+    "bf16": true,
+    "tf32": true,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.1,
+    "warmup_steps": 400,
+    "max_steps": 40000,
+    "per_device_train_batch_size": 4,
+    "gradient_accumulation_steps": 8,
+    "gradient_checkpointing": true,
+    "logging_steps": 10,
+    "save_steps": 5000,
+    "report_to": "none",
+    "remove_unused_columns": false
+  }
+}
