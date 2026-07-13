@@ -28,19 +28,19 @@ def main():
     if model.config.inject_temporal_embedding_nl:
         model.register_nl_timestamp_tokenizer(tokenizer)
 
-    messages = [{
-        "role": "user",
-        "content": "<audio>" * len(args.audio) + args.prompt,
-    }]
+    messages = [
+        {
+            "role": "user",
+            "content": "<audio>" * len(args.audio) + args.prompt,
+        }
+    ]
     text = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True,
     ).replace("<audio>", "<|vision_start|><|vision_end|>")
     text_inputs = tokenizer(text, return_tensors="pt", add_special_tokens=False)
-    audio_features, audio_lengths = pad_audio_features(
-        [AudioProcessor()(path) for path in args.audio]
-    )
+    audio_features, audio_lengths = pad_audio_features([AudioProcessor()(path) for path in args.audio])
     device = next(model.parameters()).device
 
     with torch.inference_mode():

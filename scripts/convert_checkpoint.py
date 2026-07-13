@@ -62,7 +62,7 @@ def merge_and_rename(name, tensor, reader, lora_scale):
 
     legacy_prefix = "base_llm.base_model.model."
     if name.startswith(legacy_prefix):
-        name = "base_llm." + name[len(legacy_prefix):]
+        name = "base_llm." + name[len(legacy_prefix) :]
     return name, tensor.contiguous()
 
 

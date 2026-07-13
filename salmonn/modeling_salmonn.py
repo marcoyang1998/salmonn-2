@@ -33,12 +33,17 @@ def build_zipformer2():
         num_encoder_layers=_ints("1,2,3,4,1,1,1"),
         encoder_dim=dims,
         encoder_unmasked_dim=_ints("768,768,768,768,768,768,768"),
-        query_head_dim=_ints("32"), pos_head_dim=_ints("4"), value_head_dim=_ints("12"),
-        pos_dim=48, num_heads=_ints("8,8,8,8,8,8,8"),
+        query_head_dim=_ints("32"),
+        pos_head_dim=_ints("4"),
+        value_head_dim=_ints("12"),
+        pos_dim=48,
+        num_heads=_ints("8,8,8,8,8,8,8"),
         feedforward_dim=_ints("3840,3840,3840,3840,3840,3840,3840"),
         cnn_module_kernel=_ints("31,31,15,15,15,31,31"),
         dropout=ScheduledFloat((0.0, 0.3), (20000.0, 0.1)),
-        warmup_batches=4000.0, causal=False, chunk_size=_ints("-1"),
+        warmup_batches=4000.0,
+        causal=False,
+        chunk_size=_ints("-1"),
         left_context_frames=_ints("-1"),
     )
     return MultiKDModel(encoder_embed, encoder, max(dims), num_codebooks=0)
@@ -116,8 +121,7 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
     def register_nl_timestamp_tokenizer(self, tokenizer):
         """Pre-tokenize the natural-language timestamps used by the released model."""
         self.nl_timestamp_token_ids_list = [
-            tokenizer(f"<{i * 0.1:.1f} seconds>", add_special_tokens=False)["input_ids"]
-            for i in range(1201)
+            tokenizer(f"<{i * 0.1:.1f} seconds>", add_special_tokens=False)["input_ids"] for i in range(1201)
         ]
 
     def inject_nl_timestamps(self, audio_embeds, audio_lengths):
@@ -146,14 +150,16 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
             timestamp_lengths.append(value.size(0))
         pieces = []
         for index, timestamp_embedding in enumerate(timestamp_embeddings):
-            block = audio_embeds[:, index * k:(index + 1) * k]
+            block = audio_embeds[:, index * k : (index + 1) * k]
             stamp = timestamp_embedding.unsqueeze(0).expand(batch, -1, -1)
             pieces.append(torch.cat((block, stamp), dim=1))
         cumulative = torch.tensor(timestamp_lengths, device=audio_embeds.device).cumsum(0)
         valid_blocks = torch.div(audio_lengths + k - 1, k, rounding_mode="floor").clamp(1, blocks)
         return torch.cat(pieces, dim=1), audio_lengths + cumulative[valid_blocks - 1]
 
-    def prepare_multimodal_inputs(self, input_ids, attention_mask, audio_features, audio_lengths, audio_counts, labels=None):
+    def prepare_multimodal_inputs(
+        self, input_ids, attention_mask, audio_features, audio_lengths, audio_counts, labels=None
+    ):
         audio_embeds, audio_embed_lengths = self.encode_audio(audio_features, audio_lengths)
         token_embeds = self.get_input_embeddings()(input_ids)
         vision_start_id = self.config.qwen_config.get("vision_start_token_id", 151652)
@@ -165,10 +171,10 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
                 raise ValueError(f"Sample {row} has {len(starts)} <audio> placeholders but {count} audio files")
             pieces, masks, label_pieces, previous = [], [], [], 0
             for position in starts:
-                pieces.append(token_embeds[row, previous:position + 1])
-                masks.append(attention_mask[row, previous:position + 1])
+                pieces.append(token_embeds[row, previous : position + 1])
+                masks.append(attention_mask[row, previous : position + 1])
                 if labels is not None:
-                    label_pieces.append(labels[row, previous:position + 1])
+                    label_pieces.append(labels[row, previous : position + 1])
                 length = int(audio_embed_lengths[cursor])
                 pieces.append(audio_embeds[cursor, :length])
                 masks.append(torch.ones(length, dtype=attention_mask.dtype, device=attention_mask.device))
@@ -192,8 +198,16 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
             result += (pad_sequence(output_labels, batch_first=True, padding_value=-100),)
         return result
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, audio_features=None,
-                audio_lengths=None, audio_counts=None, **kwargs):
+    def forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        labels=None,
+        audio_features=None,
+        audio_lengths=None,
+        audio_counts=None,
+        **kwargs,
+    ):
         if audio_features is None:
             return self.base_llm(input_ids=input_ids, attention_mask=attention_mask, labels=labels, **kwargs)
         prepared = self.prepare_multimodal_inputs(
@@ -201,8 +215,9 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
         )
         inputs_embeds, expanded_mask = prepared[:2]
         expanded_labels = prepared[2] if labels is not None else None
-        return self.base_llm(inputs_embeds=inputs_embeds, attention_mask=expanded_mask,
-                             labels=expanded_labels, **kwargs)
+        return self.base_llm(
+            inputs_embeds=inputs_embeds, attention_mask=expanded_mask, labels=expanded_labels, **kwargs
+        )
 
     @torch.no_grad()
     def generate(self, input_ids, attention_mask, audio_features, audio_lengths, audio_counts, **kwargs):

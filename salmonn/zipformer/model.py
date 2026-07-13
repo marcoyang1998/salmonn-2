@@ -729,7 +729,7 @@ def _test_w2v2_channel_mask():
             )
             ratio = mask_channel_indices.sum() / mask_channel_indices.numel()
             ratios.append(ratio)
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         avg_ratio = sum(ratios) / len(ratios)
         print(f"Current config: mask_channel_prob = {mask_channel_prob}, mask_channel_length = {mask_channel_length}")
         print(f"Averaged masking ratio: {avg_ratio}")
@@ -791,7 +791,7 @@ def _test_custom_mask():
                 mask_length=mask_length,
                 min_masks=2,
             )
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             ratio = mask_indices.sum() / mask_indices.numel()
             ratios.append(ratio)
         avg_ratio = sum(ratios) / len(ratios)

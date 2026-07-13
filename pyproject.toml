@@ -21,6 +21,17 @@ dependencies = [
 train = ["accelerate>=1.0", "deepspeed>=0.18"]
 flash = ["flash-attn>=2.7"]
 test = ["pytest>=8"]
+dev = ["pre-commit>=3.7", "pytest>=8"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["salmonn/zipformer"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+line-ending = "lf"
 
 [tool.setuptools.packages.find]
 include = ["salmonn*"]

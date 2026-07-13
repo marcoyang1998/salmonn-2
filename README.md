@@ -1,13 +1,62 @@
 # SALMONN-2
+[![arXiv](https://img.shields.io/badge/arXiv-26xx-brightgreen.svg?logo=Arxiv&style=flat-square)](https://arxiv.org/abs/)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/wsntxxn/SALMONN_2)
+[![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow?style=flat-square)](https://huggingface.co/marcoyang/salmonn-2-8b-test)
 
-This repository contains the supported training and inference code for SALMONN-2:
+This repository contains the supported training and inference code for SALMONN-2.
 
-```text
+
+## Contents
+
+- [Introduction](#introduction)
+- [Environment setup](#environment-setup)
+  - [1. Create and activate an environment](#1-create-and-activate-an-environment)
+  - [2. Install SALMONN-2](#2-install-salmonn-2)
+  - [3. Optional: install FlashAttention](#3-optional-install-flashattention)
+  - [4. Verify the installation](#4-verify-the-installation)
+- [Development checks](#development-checks)
+- [Quickstart](#quickstart)
+- [Train](#train)
+  - [Manifest](#manifest-format)
+  - [Training Command](#training-command)
+- [Inference](#inference)
+- [Convert a training checkpoint](#convert-a-training-checkpoint)
+- [Checkpoints](#checkpoints)
+
+
+## Introduction
+<p align="center">
+  <img src="assets/SALMONN2.png" alt="SAMONN 2">
+</p>
+
+<!-- ```text
 audio -> 128-bin filterbank -> Zipformer2 -> MLP connector -> Qwen3
-```
+``` -->
 
-It intentionally excludes datasets, data-generation pipelines, benchmark runners, scoring code,
-experimental encoders, the unused reasoning network, and pause embeddings.
+SALMONN-2 is an open-source audio understanding model with the following key innovations:
+
+- **Unified SSL audio foundation:** SALMONN-2 is built on top of a general-purpose self-supervised audio encoder ([SPEAR](https://arxiv.org/abs/2510.25955)).
+- **Multi-layer feature fusion:** The MLF adapter aggregates representations from all encoder layers, making better use of the hierarchical information learned by the SSL encoder.
+- **Balanced audio understanding:** The unified encoder delivers strong and well-balanced capability across speech, general audio, music, and paralinguistic tasks.
+- **Strong ALLM benchmark performance:** SALMONN-2 achieves state-of-the-art results among comparable-scale models on major audio understanding benchmarks, including MMAU-Pro, MMAR, and MMSU.
+- **Multimodal in-context learning:** SALMONN-2 exhibits MICL capabilities through targeted contextual biasing training.
+
+On  audio understanding benchmarks, SALMONN-2 achieves strong results
+among comparable-scale ALLMs while using substantially less supervised audio-text training data:
+
+| Model | LLM Size | Data (h) | MMAU-Pro | MMAR | MMSU |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Qwen2.5-Omni | 8B | -- | 52.2 | 56.7 | 61.3 |
+| Kimi-Audio | 8B | &gt;13M | 56.6 | 60.8 | 54.7 |
+| MiMo-Audio | 8B | &gt;1M | 53.4 | 61.7 | 61.9 |
+| AF-3 | 8B | &gt;55k | 51.7 | 58.5 | 61.4 |
+| AF-Next | 9B | &gt;500k | 56.3 | 59.7 | 59.4 |
+| MOSS-Audio | 9B | &gt;1M | 57.5 | 64.4 | 66.4 |
+| **Ours, SALMONN-2** | 9B | 18.2k | **58.5** | **64.5** | **69.5** |
+| Ours, SALMONN-2 | 30B-A3B | 18.2k | 60.3 | 67.6 | 72.0 |
+
+<!-- It intentionally excludes datasets, data-generation pipelines, benchmark runners, scoring code,
+experimental encoders, the unused reasoning network, and pause embeddings. -->
 
 ## Environment setup
 
@@ -32,7 +81,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
-### 2. Install PyTorch for your platform
+<!-- ### 2. Install PyTorch for your platform
 
 Install PyTorch and TorchAudio using the command appropriate for your operating system, accelerator,
 and driver. Select the command at <https://pytorch.org/get-started/locally/>. SALMONN-2 does not
@@ -54,9 +103,9 @@ python -c "import torch, torchaudio; print('torch:', torch.__version__); print('
 ```
 
 CPU installation is useful for imports and basic validation, but inference with the released 8B
-model normally requires one or more GPUs with sufficient aggregate memory.
+model normally requires one or more GPUs with sufficient aggregate memory. -->
 
-### 3. Install SALMONN-2
+### 2. Install SALMONN-2
 
 From the repository root:
 
@@ -64,6 +113,12 @@ From the repository root:
 pip install -r requirements.txt
 pip install -e . --no-deps
 ```
+
+> **Note:** The `torch` version pinned in `requirements.txt` is not mandatory. Any compatible
+> set of `torch`, `torchaudio`, and `torchcodec` should work, as long as their versions match the
+> same PyTorch release family. `torchcodec` is only needed when using PyTorch 2.9 or newer. We pin
+> `torch` and `torchaudio` in `requirements.txt` only to prevent potential issues
+> caused by `torchcodec`. These exact versions are not a strict requirement.
 
 The first command installs the common runtime dependencies. The second installs this repository in
 editable mode without asking pip to reconsider the platform-specific PyTorch installation.
@@ -74,7 +129,7 @@ For training, install the additional dependencies:
 pip install 'accelerate>=1.0' 'deepspeed>=0.18'
 ```
 
-### 4. Optional: install FlashAttention
+### 3. Optional: install FlashAttention
 
 FlashAttention is not required. The portable default is PyTorch scaled-dot-product attention
 (`sdpa`). To use it, set this in the training configuration:
@@ -100,7 +155,7 @@ Then select it in the configuration:
 FlashAttention compilation requires a compatible GPU, CUDA toolkit, compiler, and sufficient host
 memory. If installation fails, continue with `sdpa`.
 
-### 5. Verify the installation
+### 4. Verify the installation
 
 ```bash
 python -m compileall -q salmonn scripts
@@ -121,7 +176,85 @@ The environment setup installs code dependencies only. Inference additionally re
 released SALMONN-2 checkpoint. Training from scratch requires Qwen3 weights, a pretrained
 Zipformer2 checkpoint, a prepared manifest, and the referenced audio files.
 
-## Manifest format
+## Development checks
+
+Install and enable pre-commit locally before opening a pull request:
+
+```bash
+pip install 'pre-commit>=3.7'
+pre-commit install
+pre-commit run --all-files
+```
+
+The hooks run basic file checks, Ruff sanity checks, and Ruff formatting for Python code. The same
+pre-commit hooks and unit tests run in GitHub Actions on every push and pull request.
+
+## Quickstart
+
+Download the checkpoint from HuggingFace first:
+```bash
+hf download marcoyang/salmonn-2-8b-test --repo-type model --local-dir /path/to/salmonn-2-hf
+```
+
+Below is the code snippet to use SALMONN-2:
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from salmonn import AudioProcessor, clean_decoded_response
+from salmonn.audio import pad_audio_features
+
+model_path = "/path/to/salmonn-2-hf"
+audio_paths = ["example.wav"]
+instruction = "Please describe the audio."
+
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForCausalLM.from_pretrained(
+    model_path,
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+    device_map="auto",
+).eval()
+
+if model.config.inject_temporal_embedding_nl:
+    model.register_nl_timestamp_tokenizer(tokenizer)
+
+messages = [{
+    "role": "user",
+    "content": "<audio>" * len(audio_paths) + instruction,
+}]
+text = tokenizer.apply_chat_template(
+    messages,
+    tokenize=False,
+    add_generation_prompt=True,
+).replace("<audio>", "<|vision_start|><|vision_end|>")
+
+text_inputs = tokenizer(text, return_tensors="pt", add_special_tokens=False)
+processor = AudioProcessor()
+audio_features, audio_lengths = pad_audio_features(
+    [processor(path) for path in audio_paths]
+)
+device = next(model.parameters()).device
+
+with torch.inference_mode():
+    output_ids = model.generate(
+        **text_inputs.to(device),
+        audio_features=audio_features.to(device),
+        audio_lengths=audio_lengths.to(device),
+        audio_counts=torch.tensor([len(audio_paths)], device=device),
+        max_new_tokens=256,
+        do_sample=False,
+    )
+
+output = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+print(clean_decoded_response(output))
+```
+
+
+## Train
+
+### Manifest format
 
 Training consumes an already prepared JSON conversation manifest. Every `<audio>` placeholder
 must correspond, in order, to one entry in `audios`.
@@ -141,7 +274,7 @@ must correspond, in order, to one entry in `audios`.
 The loader resamples audio to 16 kHz and computes 128-bin filterbanks. Dataset downloading,
 conversion, augmentation, and task-specific prompting are outside this repository.
 
-## Train
+### Training Command
 
 Edit the model paths in `configs/train_stage1.json`, then run:
 
@@ -159,30 +292,14 @@ Stage two loads the stage-one checkpoint and applies Qwen3 LoRA. Update `model_n
 ## Inference
 
 Converted checkpoints use the standard Hugging Face auto classes with bundled custom model code.
-Pass `trust_remote_code=True` when loading them. A complete Python example is available in
-[`examples/inference_hf.py`](examples/inference_hf.py).
+Pass `trust_remote_code=True` when loading them. A complete script is available in
+[`examples/inference_hf.py`](examples/inference_hf.py). To run it from the command line:
 
 ```bash
 python examples/inference_hf.py \
   --model_path /path/to/salmonn-2-hf \
   --audio example.wav \
   --prompt "Please describe the audio."
-```
-
-The equivalent Python loading pattern is:
-
-```python
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-model = AutoModelForCausalLM.from_pretrained(
-    checkpoint,
-    trust_remote_code=True,
-    dtype=torch.bfloat16,
-    device_map="auto",
-).eval()
-model.register_nl_timestamp_tokenizer(tokenizer)
 ```
 
 The repository CLI uses the same Hugging Face loading path:
@@ -236,3 +353,5 @@ under the `model` key. Full SALMONN-2 checkpoints use the Hugging Face `save_pre
 
 The Zipformer source files retain their upstream copyright and Apache-2.0 notices. Confirm the
 license and distribution terms for Qwen3 and released model weights separately.
+
+## Citation

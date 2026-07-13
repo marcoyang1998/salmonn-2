@@ -7,10 +7,9 @@ from salmonn.training import SalmonnDataset
 
 def test_manifest_validation(tmp_path):
     path = tmp_path / "data.json"
-    path.write_text(json.dumps([{
-        "audios": ["audio.wav"],
-        "messages": [{"role": "user", "content": "<audio>Describe it."}]
-    }]))
+    path.write_text(
+        json.dumps([{"audios": ["audio.wav"], "messages": [{"role": "user", "content": "<audio>Describe it."}]}])
+    )
     assert len(SalmonnDataset(path)) == 1
 
 

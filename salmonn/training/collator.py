@@ -11,9 +11,7 @@ class SalmonnCollator:
     audio_processor: AudioProcessor
 
     def _render(self, messages, generation_prompt=False):
-        text = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=generation_prompt
-        )
+        text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=generation_prompt)
         return text.replace("<audio>", "<|vision_start|><|vision_end|>")
 
     def __call__(self, samples):
