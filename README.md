@@ -26,7 +26,7 @@ This repository contains the supported training and inference code for SALMONN-2
 
 ## Introduction
 <p align="center">
-  <img src="assets/SALMONN2.png" alt="SAMONN 2">
+  <img src="assets/SALMONN2.png" alt="SALMONN 2">
 </p>
 
 <!-- ```text
@@ -41,8 +41,7 @@ SALMONN-2 is an open-source audio understanding model with the following key inn
 - **Strong ALLM benchmark performance:** SALMONN-2 achieves state-of-the-art results among comparable-scale models on major audio understanding benchmarks, including MMAU-Pro, MMAR, and MMSU.
 - **Multimodal in-context learning:** SALMONN-2 exhibits MICL capabilities through targeted contextual biasing training.
 
-On  audio understanding benchmarks, SALMONN-2 achieves strong results
-among comparable-scale ALLMs while using substantially less supervised audio-text training data:
+On speech and  audio understanding benchmarks, SALMONN-2 achieves strong results among comparable-scale ALLMs while using substantially less supervised audio-text training data:
 
 | Model | LLM Size | Data (h) | MMAU-Pro | MMAR | MMSU |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -81,29 +80,6 @@ source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
-<!-- ### 2. Install PyTorch for your platform
-
-Install PyTorch and TorchAudio using the command appropriate for your operating system, accelerator,
-and driver. Select the command at <https://pytorch.org/get-started/locally/>. SALMONN-2 does not
-hard-code a CUDA version.
-
-For example, a CPU-only installation can be created with:
-
-```bash
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-```
-
-For an NVIDIA or AMD GPU, use the CUDA or ROCm command supplied by the PyTorch selector instead.
-Keep `torch` and `torchaudio` on matching releases.
-
-Confirm that PyTorch can see the intended device:
-
-```bash
-python -c "import torch, torchaudio; print('torch:', torch.__version__); print('torchaudio:', torchaudio.__version__); print('CUDA available:', torch.cuda.is_available())"
-```
-
-CPU installation is useful for imports and basic validation, but inference with the released 8B
-model normally requires one or more GPUs with sufficient aggregate memory. -->
 
 ### 2. Install SALMONN-2
 
@@ -327,10 +303,7 @@ The batch command only generates responses; it does not compute benchmark scores
 
 ## Convert a training checkpoint
 
-Legacy Trainer/DeepSpeed checkpoints must be converted before they can be loaded by the release
-model. The converter merges Qwen LoRA adapters, rewrites legacy PEFT parameter names, creates a
-SALMONN-2 Hugging Face configuration, bundles the custom model code, and excludes optimizer and
-other training-only state.
+The following script converts HF Trainer/DeepSpeed checkpoints by merging LoRA adapters, creating a Hugging Face configuration, bundling the custom model code, and excluding training-only states (e.g., optimizer states):
 
 ```bash
 python scripts/convert_checkpoint.py \
@@ -339,19 +312,15 @@ python scripts/convert_checkpoint.py \
 ```
 
 By default, the converter reads `model_args` from `INPUT/../config.json`. Specify a different file
-with `--training-config` when necessary. The output directory must be new or empty. Conversion is
-performed one safetensor shard at a time on CPU; it does not require a GPU, but it needs enough RAM
+with `--training-config` when necessary. Conversion is performed one safetensor shard at a time on CPU; it does not require a GPU, but it needs enough RAM
 for the largest input shard.
 
-Always compare the legacy and converted models on a fixed set of audio prompts before publishing
-the converted checkpoint.
+<!-- ## Checkpoints -->
 
-## Checkpoints
+<!-- The Zipformer checkpoint may either be a raw state dictionary or contain its state dictionary -->
+<!-- under the `model` key. Full SALMONN-2 checkpoints use the Hugging Face `save_pretrained` layout. -->
 
-The Zipformer checkpoint may either be a raw state dictionary or contain its state dictionary
-under the `model` key. Full SALMONN-2 checkpoints use the Hugging Face `save_pretrained` layout.
-
-The Zipformer source files retain their upstream copyright and Apache-2.0 notices. Confirm the
-license and distribution terms for Qwen3 and released model weights separately.
+<!-- The Zipformer source files retain their upstream copyright and Apache-2.0 notices. Confirm the -->
+<!-- license and distribution terms for Qwen3 and released model weights separately. -->
 
 ## Citation
