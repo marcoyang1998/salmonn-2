@@ -1,6 +1,6 @@
 # SALMONN-2
 [![arXiv](https://img.shields.io/badge/arXiv-26xx-brightgreen.svg?logo=Arxiv&style=flat-square)](https://arxiv.org/abs/)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/wsntxxn/SALMONN_2)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/wsntxxn/SALMONN-2)
 [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow?style=flat-square)](https://huggingface.co/marcoyang/salmonn-2-8b-test)
 
 This repository contains the supported training and inference code for SALMONN-2.
