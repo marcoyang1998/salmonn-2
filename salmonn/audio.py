@@ -5,7 +5,7 @@ import torchaudio
 
 
 class AudioProcessor:
-    """Load audio and compute the 128-bin filterbanks expected by Zipformer2."""
+    """Load audio and compute the 128-bin filterbanks expected by SPEAR."""
 
     def __init__(self, sample_rate=16000, num_mel_bins=128):
         from lhotse import Fbank, FbankConfig

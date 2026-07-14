@@ -7,7 +7,6 @@ class SalmonnConfig(PretrainedConfig):
     def __init__(
         self,
         qwen_config=None,
-        zipformer_checkpoint=None,
         freeze_audio_encoder=True,
         connector_hidden_size=4096,
         connector_segment_size=5,
@@ -19,7 +18,6 @@ class SalmonnConfig(PretrainedConfig):
     ):
         super().__init__(**kwargs)
         self.qwen_config = qwen_config or {}
-        self.zipformer_checkpoint = zipformer_checkpoint
         self.freeze_audio_encoder = freeze_audio_encoder
         self.connector_hidden_size = connector_hidden_size
         self.connector_segment_size = connector_segment_size

@@ -1,6 +1,4 @@
 import contextlib
-from dataclasses import dataclass
-from pathlib import Path
 
 import torch
 from torch import nn
@@ -10,24 +8,24 @@ from transformers import AutoModelForCausalLM, PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 from .configuration_salmonn import SalmonnConfig
-from .zipformer.model import MultiKDModel
-from .zipformer.scaling import ScheduledFloat
-from .zipformer.subsampling import Conv2dSubsampling
-from .zipformer.zipformer_layerwise import Zipformer2
+from .spear.model import MultiKDModel
+from .spear.scaling import ScheduledFloat
+from .spear.subsampling import Conv2dSubsampling
+from .spear.zipformer_layerwise import Zipformer2 as SPEAREncoder
 
 
 def _ints(value):
     return tuple(map(int, value.split(",")))
 
 
-def build_zipformer2():
+def build_spear():
     dims = _ints("1280,1280,1280,1280,1280,1280,1280")
     encoder_embed = Conv2dSubsampling(
         in_channels=128,
         out_channels=dims[0],
         dropout=ScheduledFloat((0.0, 0.3), (20000.0, 0.1)),
     )
-    encoder = Zipformer2(
+    encoder = SPEAREncoder(
         output_downsampling_factor=1,
         downsampling_factor=_ints("1,2,4,8,4,2,1"),
         num_encoder_layers=_ints("1,2,3,4,1,1,1"),
@@ -50,7 +48,7 @@ def build_zipformer2():
 
 
 class SalmonnForConditionalGeneration(PreTrainedModel):
-    """SALMONN-2: Zipformer2, an MLP connector, and a Qwen3 language model."""
+    """SALMONN-2: a SPEAR audio encoder, an MLP connector, and Qwen3."""
 
     config_class = SalmonnConfig
     base_model_prefix = "salmonn"
@@ -63,10 +61,7 @@ class SalmonnForConditionalGeneration(PreTrainedModel):
 
         qwen_config = AutoConfig.for_model(**config.qwen_config)
         self.base_llm = AutoModelForCausalLM.from_config(qwen_config)
-        self.audio_encoder = build_zipformer2()
-        if config.zipformer_checkpoint:
-            state = torch.load(Path(config.zipformer_checkpoint), map_location="cpu", weights_only=True)
-            self.audio_encoder.load_state_dict(state.get("model", state), strict=False)
+        self.audio_encoder = build_spear()
 
         encoder_dim = self.audio_encoder.encoder_dim
         self.ln_audio = nn.LayerNorm(encoder_dim)

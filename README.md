@@ -16,12 +16,10 @@ This repository contains the supported training and inference code for SALMONN-2
   - [4. Verify the installation](#4-verify-the-installation)
 - [Development checks](#development-checks)
 - [Quickstart](#quickstart)
-- [Train](#train)
+- [Fine-tune](#fine-tune)
   - [Manifest](#manifest-format)
-  - [Training Command](#training-command)
+  - [Fine-tuning command](#fine-tuning-command)
 - [Inference](#inference)
-- [Convert a training checkpoint](#convert-a-training-checkpoint)
-- [Checkpoints](#checkpoints)
 
 
 ## Introduction
@@ -30,12 +28,12 @@ This repository contains the supported training and inference code for SALMONN-2
 </p>
 
 <!-- ```text
-audio -> 128-bin filterbank -> Zipformer2 -> MLP connector -> Qwen3
+audio -> 128-bin filterbank -> SPEAR -> MLP connector -> Qwen3
 ``` -->
 
 SALMONN-2 is an open-source audio understanding model with the following key innovations:
 
-- **Unified SSL audio foundation:** SALMONN-2 is built on top of a general-purpose self-supervised audio encoder ([SPEAR](https://arxiv.org/abs/2510.25955)).
+- **Unified SSL audio foundation:** SALMONN-2 is built on top of the general-purpose self-supervised [SPEAR audio encoder](https://huggingface.co/marcoyang/spear-xlarge-speech-audio-v2).
 - **Multi-layer feature fusion:** The MLF adapter aggregates representations from all encoder layers, making better use of the hierarchical information learned by the SSL encoder.
 - **Balanced audio understanding:** The unified encoder delivers strong and well-balanced capability across speech, general audio, music, and paralinguistic tasks.
 - **Strong ALLM benchmark performance:** SALMONN-2 achieves state-of-the-art results among comparable-scale models on major audio understanding benchmarks, including MMAU-Pro, MMAR, and MMSU.
@@ -148,9 +146,8 @@ pip install 'pytest>=8'
 pytest -q
 ```
 
-The environment setup installs code dependencies only. Inference additionally requires the
-released SALMONN-2 checkpoint. Training from scratch requires Qwen3 weights, a pretrained
-Zipformer2 checkpoint, a prepared manifest, and the referenced audio files.
+The environment setup installs code dependencies only. Inference and fine-tuning additionally
+require the released SALMONN-2 checkpoint; SPEAR is already included in those model weights.
 
 ## Development checks
 
@@ -228,7 +225,7 @@ print(clean_decoded_response(output))
 ```
 
 
-## Train
+## Fine-tune
 
 ### Manifest format
 
@@ -250,20 +247,25 @@ must correspond, in order, to one entry in `audios`.
 The loader resamples audio to 16 kHz and computes 128-bin filterbanks. Dataset downloading,
 conversion, augmentation, and task-specific prompting are outside this repository.
 
-### Training Command
+### Fine-tuning command
 
-Edit the model paths in `configs/train_stage1.json`, then run:
+Fine-tuning starts from the released Hugging Face SALMONN-2 checkpoint. Its original Qwen3 LoRA
+weights are already merged into the base model; the training script adds a new LoRA adapter to
+`q_proj` and `v_proj`. By default, SPEAR remains frozen while the audio connector and the new
+LoRA adapter are trainable.
+
+Set `model_name_or_path` in `configs/finetune.json` to either the Hugging Face model ID or a local
+converted-checkpoint directory, then run:
 
 ```bash
 torchrun --nproc_per_node=8 scripts/train.py \
-  --config configs/train_stage1.json \
+  --config configs/finetune.json \
   --data_path /path/to/train.json \
-  --output_dir output/stage1
+  --output_dir output/finetuned
 ```
 
-Stage two loads the stage-one checkpoint and applies Qwen3 LoRA. Update `model_name_or_path` in
-`configs/train_stage2.json` before launching it in the same way. DeepSpeed can be enabled by adding
-`"deepspeed": "configs/deepspeed_zero2.json"` to the `training` block.
+Set `freeze_connector` to `true` if only the new Qwen3 LoRA adapter should be trained. DeepSpeed can
+be enabled by adding `"deepspeed": "configs/deepspeed_zero2.json"` to the `training` block.
 
 ## Inference
 
@@ -300,27 +302,5 @@ python scripts/infer_batch.py \
 ```
 
 The batch command only generates responses; it does not compute benchmark scores.
-
-## Convert a training checkpoint
-
-The following script converts HF Trainer/DeepSpeed checkpoints by merging LoRA adapters, creating a Hugging Face configuration, bundling the custom model code, and excluding training-only states (e.g., optimizer states):
-
-```bash
-python scripts/convert_checkpoint.py \
-  --input /path/to/experiment/checkpoint-50000 \
-  --output /path/to/salmonn-2-hf
-```
-
-By default, the converter reads `model_args` from `INPUT/../config.json`. Specify a different file
-with `--training-config` when necessary. Conversion is performed one safetensor shard at a time on CPU; it does not require a GPU, but it needs enough RAM
-for the largest input shard.
-
-<!-- ## Checkpoints -->
-
-<!-- The Zipformer checkpoint may either be a raw state dictionary or contain its state dictionary -->
-<!-- under the `model` key. Full SALMONN-2 checkpoints use the Hugging Face `save_pretrained` layout. -->
-
-<!-- The Zipformer source files retain their upstream copyright and Apache-2.0 notices. Confirm the -->
-<!-- license and distribution terms for Qwen3 and released model weights separately. -->
 
 ## Citation
