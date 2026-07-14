@@ -14,7 +14,7 @@ repos:
         args: ["--fix=lf"]
         exclude: ^(assets|outputs)/
       - id: trailing-whitespace
-        exclude: ^(assets|outputs|salmonn/zipformer)/
+        exclude: ^(assets|outputs|salmonn/spear)/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
