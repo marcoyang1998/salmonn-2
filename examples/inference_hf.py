@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run single- or multi-audio inference from a converted SALMONN-2 checkpoint."""
+"""Run single- or multi-audio inference from a released SALMONN-2 checkpoint."""
 
 import argparse
 
@@ -7,7 +7,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from salmonn.audio import AudioProcessor, pad_audio_features
-from salmonn.text import clean_decoded_response
+from salmonn.text import clean_decoded_response, prepare_audio_prompt
 
 
 def main():
@@ -31,7 +31,8 @@ def main():
     messages = [
         {
             "role": "user",
-            "content": "<audio>" * len(args.audio) + args.prompt,
+            "content": prepare_audio_prompt(args.prompt, len(args.audio)),
+
         }
     ]
     text = tokenizer.apply_chat_template(

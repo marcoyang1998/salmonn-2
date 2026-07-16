@@ -1,3 +1,15 @@
 [
-  {"audios": ["/path/to/example.wav"], "prompt": "Please describe the audio."}
+  {
+    "audios": ["/path/to/example.wav"],
+    "prompt": "Please describe the audio."
+  },
+  {
+    "audios": [
+      "/path/to/main_utterance.wav",
+      "/path/to/salmonn_pronunciation.wav",
+      "/path/to/spear_pronunciation.wav",
+      "/path/to/qwen_pronunciation.wav"
+    ],
+    "prompt": "<audio>Recognize the speech and give me the transcription.\nUse the following contextual words and their pronunciations as references while transcribing the speech:\n<biasing_list>\n<audio>SALMONN\n<audio>SPEAR\n<audio>Qwen\n</biasing_list>."
+  }
 ]

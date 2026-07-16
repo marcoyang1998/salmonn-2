@@ -6,11 +6,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from salmonn import AudioProcessor
 from salmonn.audio import pad_audio_features
-from salmonn.text import clean_decoded_response
+from salmonn.text import clean_decoded_response, prepare_audio_prompt
 
 
 def generate(model, tokenizer, processor, audio_paths, prompt, max_new_tokens=256):
-    messages = [{"role": "user", "content": "<audio>" * len(audio_paths) + prompt}]
+    messages = [{"role": "user", "content": prepare_audio_prompt(prompt, len(audio_paths))}]
     text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     text = text.replace("<audio>", "<|vision_start|><|vision_end|>")
     tokens = tokenizer(text, return_tensors="pt", add_special_tokens=False).to(model.device)
