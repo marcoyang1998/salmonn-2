@@ -3,7 +3,7 @@
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/wsntxxn/SALMONN-2)
 [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow?style=flat-square)](https://huggingface.co/marcoyang/salmonn-2-8b-test)
 
-This repository contains the supported training and inference code for SALMONN-2.
+This repository contains the supported inference and fine-tuning code for SALMONN-2.
 
 
 ## Contents
@@ -16,10 +16,10 @@ This repository contains the supported training and inference code for SALMONN-2
   - [4. Verify the installation](#4-verify-the-installation)
 - [Development checks](#development-checks)
 - [Quickstart](#quickstart)
+- [Inference](#inference)
 - [Fine-tune](#fine-tune)
   - [Manifest](#manifest-format)
   - [Fine-tuning command](#fine-tuning-command)
-- [Inference](#inference)
 
 
 ## Introduction
@@ -175,7 +175,7 @@ Below is the code snippet to use SALMONN-2:
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from salmonn import AudioProcessor, clean_decoded_response
+from salmonn import AudioProcessor, clean_decoded_response, prepare_audio_prompt
 from salmonn.audio import pad_audio_features
 
 model_path = "/path/to/salmonn-2-hf"
@@ -195,7 +195,7 @@ if model.config.inject_temporal_embedding_nl:
 
 messages = [{
     "role": "user",
-    "content": "<audio>" * len(audio_paths) + instruction,
+    "content": prepare_audio_prompt(instruction, len(audio_paths)),
 }]
 text = tokenizer.apply_chat_template(
     messages,
@@ -225,6 +225,66 @@ print(clean_decoded_response(output))
 ```
 
 
+## Inference
+
+Released checkpoints use the standard Hugging Face auto classes with bundled custom model code.
+Pass `trust_remote_code=True` when loading them. A complete script is available in
+[`examples/inference_hf.py`](examples/inference_hf.py). To run it from the command line:
+
+```bash
+python examples/inference_hf.py \
+  --model_path /path/to/salmonn-2-hf \
+  --audio example.wav \
+  --prompt "Please describe the audio."
+```
+
+The repository CLI uses the same Hugging Face loading path:
+
+```bash
+python scripts/infer.py \
+  --model_path /path/to/salmonn-2-checkpoint \
+  --audio example.wav \
+  --prompt "Please describe the audio."
+```
+
+The example and inference CLIs remove the literal `<think>` and `</think>` boundary tags from
+displayed responses. This is output formatting only and does not alter generation or token IDs.
+
+### MICL-based Contextual ASR
+
+Repeat `--audio` for prompts containing multiple audio inputs. If the prompt contains no `<audio>`
+placeholder, the CLI places all audio inputs before the prompt. To control their positions, include
+one `<audio>` placeholder per audio file; files are matched to placeholders from left to right.
+
+For example, contextual ASR takes the main utterance first, followed by one pronunciation audio for
+each contextual word:
+
+```json
+[
+  {
+    "audios": [
+      "/path/to/main_utterance.wav",
+      "/path/to/salmonn_pronunciation.wav",
+      "/path/to/spear_pronunciation.wav",
+      "/path/to/qwen_pronunciation.wav"
+    ],
+    "prompt": "<audio>Recognize the speech and give me the transcription.\nUse the following contextual words and their pronunciations as references while transcribing the speech:\n<biasing_list>\n<audio>SALMONN\n<audio>SPEAR\n<audio>Qwen\n</biasing_list>."
+  }
+]
+```
+
+Here the first placeholder receives `main_utterance.wav`; the following placeholders receive the
+pronunciations of `SALMONN`, `SPEAR`, and `Qwen`, respectively. For JSON batch generation:
+
+```bash
+python scripts/infer_batch.py \
+  --model_path /path/to/salmonn-2-checkpoint \
+  --input examples/inference_manifest.json \
+  --output predictions.jsonl
+```
+
+The batch command only generates responses; it does not compute benchmark scores.
+
 ## Fine-tune
 
 ### Manifest format
@@ -249,13 +309,23 @@ conversion, augmentation, and task-specific prompting are outside this repositor
 
 ### Fine-tuning command
 
-Fine-tuning starts from the released Hugging Face SALMONN-2 checkpoint. Its original Qwen3 LoRA
-weights are already merged into the base model; the training script adds a new LoRA adapter to
-`q_proj` and `v_proj`. By default, SPEAR remains frozen while the audio connector and the new
-LoRA adapter are trainable.
+Fine-tuning starts from the released Hugging Face SALMONN-2 checkpoint. The training script adds a
+new LoRA adapter to `q_proj` and `v_proj`. The provided configuration intentionally keeps the SPEAR
+encoder frozen with `freeze_audio_encoder: true`, matching how SALMONN-2 was originally trained.
+The audio connector and the new LoRA adapter remain trainable.
 
 Set `model_name_or_path` in `configs/finetune.json` to either the Hugging Face model ID or a local
-converted-checkpoint directory, then run:
+checkpoint directory. For single-GPU fine-tuning, run:
+
+```bash
+python scripts/train.py \
+  --config configs/finetune.json \
+  --data_path /path/to/train.json \
+  --output_dir output/finetuned
+```
+
+For multi-GPU fine-tuning, launch the same script with `torchrun`, setting the process count to the
+number of GPUs:
 
 ```bash
 torchrun --nproc_per_node=8 scripts/train.py \
@@ -266,41 +336,5 @@ torchrun --nproc_per_node=8 scripts/train.py \
 
 Set `freeze_connector` to `true` if only the new Qwen3 LoRA adapter should be trained. DeepSpeed can
 be enabled by adding `"deepspeed": "configs/deepspeed_zero2.json"` to the `training` block.
-
-## Inference
-
-Converted checkpoints use the standard Hugging Face auto classes with bundled custom model code.
-Pass `trust_remote_code=True` when loading them. A complete script is available in
-[`examples/inference_hf.py`](examples/inference_hf.py). To run it from the command line:
-
-```bash
-python examples/inference_hf.py \
-  --model_path /path/to/salmonn-2-hf \
-  --audio example.wav \
-  --prompt "Please describe the audio."
-```
-
-The repository CLI uses the same Hugging Face loading path:
-
-```bash
-python scripts/infer.py \
-  --model_path /path/to/salmonn-2-checkpoint \
-  --audio example.wav \
-  --prompt "Please describe the audio."
-```
-
-The example and inference CLIs remove the literal `<think>` and `</think>` boundary tags from
-displayed responses. This is output formatting only and does not alter generation or token IDs.
-
-Repeat `--audio` for prompts containing multiple audio inputs. For JSON batch generation:
-
-```bash
-python scripts/infer_batch.py \
-  --model_path /path/to/salmonn-2-checkpoint \
-  --input examples/inference_manifest.json \
-  --output predictions.jsonl
-```
-
-The batch command only generates responses; it does not compute benchmark scores.
 
 ## Citation
