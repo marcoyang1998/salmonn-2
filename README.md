@@ -228,17 +228,8 @@ print(clean_decoded_response(output))
 ## Inference
 
 Released checkpoints use the standard Hugging Face auto classes with bundled custom model code.
-Pass `trust_remote_code=True` when loading them. A complete script is available in
-[`examples/inference_hf.py`](examples/inference_hf.py). To run it from the command line:
-
-```bash
-python examples/inference_hf.py \
-  --model_path /path/to/salmonn-2-hf \
-  --audio example.wav \
-  --prompt "Please describe the audio."
-```
-
-The repository CLI uses the same Hugging Face loading path:
+Pass `trust_remote_code=True` when loading them. The repository CLI uses this Hugging Face loading
+path:
 
 ```bash
 python scripts/infer.py \
@@ -247,8 +238,8 @@ python scripts/infer.py \
   --prompt "Please describe the audio."
 ```
 
-The example and inference CLIs remove the literal `<think>` and `</think>` boundary tags from
-displayed responses. This is output formatting only and does not alter generation or token IDs.
+The inference CLI removes the literal `<think>` and `</think>` boundary tags from displayed
+responses. This is output formatting only and does not alter generation or token IDs.
 
 ### MICL-based Contextual ASR
 
