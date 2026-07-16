@@ -247,31 +247,37 @@ Repeat `--audio` for prompts containing multiple audio inputs. If the prompt con
 placeholder, the CLI places all audio inputs before the prompt. To control their positions, include
 one `<audio>` placeholder per audio file; files are matched to placeholders from left to right.
 
-For example, contextual ASR takes the main utterance first, followed by one pronunciation audio for
-each contextual word:
+For a concrete MICL contextual-ASR example, the repository includes a main utterance containing the
+uncommon name `Howes`, together with pronunciation examples for the contextual words `howes` and
+`wszelaki`:
 
 ```json
 [
   {
     "audios": [
-      "/path/to/main_utterance.wav",
-      "/path/to/salmonn_pronunciation.wav",
-      "/path/to/spear_pronunciation.wav",
-      "/path/to/qwen_pronunciation.wav"
+      "assets/micl/main_utterance.wav",
+      "assets/micl/howes.wav",
+      "assets/micl/wszelaki.wav"
     ],
-    "prompt": "<audio>Recognize the speech and give me the transcription.\nUse the following contextual words and their pronunciations as references while transcribing the speech:\n<biasing_list>\n<audio>SALMONN\n<audio>SPEAR\n<audio>Qwen\n</biasing_list>."
+    "prompt": "<audio>Recognize the speech and give me the transcription.\nUse the following contextual words and their pronunciations as references while transcribing the speech:\n<biasing_list>\n<audio>howes\n<audio>wszelaki\n</biasing_list>."
   }
 ]
 ```
 
-Here the first placeholder receives `main_utterance.wav`; the following placeholders receive the
-pronunciations of `SALMONN`, `SPEAR`, and `Qwen`, respectively. For JSON batch generation:
+The first `<audio>` token receives the main utterance. The next two pair `howes.wav` with the written
+word `howes` and `wszelaki.wav` with `wszelaki`, giving the model both spelling and pronunciation.
+The `<audio>` tokens are required model-input markers; the audio files themselves are included under
+`assets/micl/`. The generated transcription includes:
+
+> ... drake non typical clothing howes lubricator r t p outdoors.
+
+Run the included example with:
 
 ```bash
 python scripts/infer_batch.py \
   --model_path /path/to/salmonn-2-checkpoint \
-  --input examples/inference_manifest.json \
-  --output predictions.jsonl
+  --input examples/micl_manifest.json \
+  --output micl_prediction.jsonl
 ```
 
 The batch command only generates responses; it does not compute benchmark scores.

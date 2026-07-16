@@ -1,0 +1,10 @@
+[
+  {
+    "audios": [
+      "assets/micl/main_utterance.wav",
+      "assets/micl/howes.wav",
+      "assets/micl/wszelaki.wav"
+    ],
+    "prompt": "<audio>Recognize the speech and give me the transcription.\nUse the following contextual words and their pronunciations as references while transcribing the speech:\n<biasing_list>\n<audio>howes\n<audio>wszelaki\n</biasing_list>."
+  }
+]
