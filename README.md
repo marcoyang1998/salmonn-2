@@ -39,7 +39,7 @@ SALMONN-2 is an open-source audio understanding model with the following key inn
 - **Strong ALLM benchmark performance:** SALMONN-2 achieves state-of-the-art results among comparable-scale models on major audio understanding benchmarks, including MMAU-Pro, MMAR, and MMSU.
 - **Multimodal in-context learning:** SALMONN-2 exhibits MICL capabilities through targeted contextual biasing training.
 
-On speech and  audio understanding benchmarks, SALMONN-2 achieves strong results among comparable-scale ALLMs while using substantially less supervised audio-text training data:
+On speech and audio understanding benchmarks, SALMONN-2 achieves strong results among comparable-scale ALLMs while using substantially less supervised audio-text training data:
 
 | Model | LLM Size | Data (h) | MMAU-Pro | MMAR | MMSU |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -335,3 +335,8 @@ Set `freeze_connector` to `true` if only the new Qwen3 LoRA adapter should be tr
 be enabled by adding `"deepspeed": "configs/deepspeed_zero2.json"` to the `training` block.
 
 ## Citation
+
+Yang, X., Yang, Y., Jin, Z., Cui, Z., Wu, W., Li, B., Zhang, C., and Woodland, P.,
+“[SPEAR: A Unified SSL Framework for Learning Speech and Audio
+Representations](https://openreview.net/forum?id=vHaaDCLF0M),” Proceedings of the Forty-third
+International Conference on Machine Learning (ICML), 2026.
