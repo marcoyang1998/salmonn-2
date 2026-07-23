@@ -1,7 +1,7 @@
 # SALMONN-2
 [![arXiv](https://img.shields.io/badge/arXiv-26xx-brightgreen.svg?logo=Arxiv&style=flat-square)](https://arxiv.org/abs/)
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/wsntxxn/SALMONN-2)
-[![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow?style=flat-square)](https://huggingface.co/marcoyang/salmonn-2-8b-test)
+[![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow?style=flat-square)](https://huggingface.co/marcoyang/SALMONN-2-8B)
 
 This repository contains the supported inference and fine-tuning code for SALMONN-2.
 
@@ -166,7 +166,7 @@ pre-commit hooks and unit tests run in GitHub Actions on every push and pull req
 
 Download the checkpoint from HuggingFace first:
 ```bash
-hf download marcoyang/salmonn-2-8b-test --repo-type model --local-dir /path/to/salmonn-2-hf
+hf download marcoyang/SALMONN-2-8B --repo-type model --local-dir /path/to/salmonn-2-hf
 ```
 
 Below is the code snippet to use SALMONN-2:
