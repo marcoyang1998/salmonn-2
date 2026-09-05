@@ -23,10 +23,12 @@ def main():
         raise ValueError("model_name_or_path must point to a released SALMONN-2 checkpoint")
 
     attention = config_data.pop("attn_implementation", None)
-    model_kwargs = {"torch_dtype": "auto"}
+    model = SalmonnForConditionalGeneration.from_pretrained(model_path, torch_dtype="auto")
     if attention:
-        model_kwargs["attn_implementation"] = attention
-    model = SalmonnForConditionalGeneration.from_pretrained(model_path, **model_kwargs)
+        # SalmonnForConditionalGeneration does not declare support for alternative attention
+        # backends, so this cannot go through from_pretrained. Apply it to the Qwen3 stack,
+        # which is where the attention cost is; SPEAR has its own attention either way.
+        model.base_llm.set_attn_implementation(attention)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     freeze_audio_encoder = config_data.pop("freeze_audio_encoder", True)
@@ -57,6 +59,10 @@ def main():
     resume = training_values.pop("resume_from_checkpoint", None)
     training_values["output_dir"] = args.output_dir
     training_args = TrainingArguments(**training_values)
+    # Without this, freezing both the encoder and the connector leaves nothing entering the
+    # checkpointed Qwen3 blocks requiring grad, so no graph is built and training dies.
+    if training_args.gradient_checkpointing:
+        model.enable_input_require_grads()
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -64,8 +70,19 @@ def main():
         data_collator=SalmonnCollator(tokenizer, AudioProcessor()),
     )
     trainer.train(resume_from_checkpoint=resume)
-    trainer.save_model(args.output_dir)
-    tokenizer.save_pretrained(args.output_dir)
+
+    # Everything written here keeps the PEFT-nested key names, so `--resume_from_checkpoint`
+    # works against any of these directories. Run `scripts/merge_lora.py` to convert one into
+    # the released layout for inference.
+    final_checkpoint = Path(args.output_dir) / "checkpoint-final"
+    trainer.save_model(str(final_checkpoint))
+    if trainer.is_world_process_zero():
+        tokenizer.save_pretrained(str(final_checkpoint))
+        print(
+            f"Saved {final_checkpoint}. It uses PEFT-nested key names; convert it for inference with:\n"
+            f"  python scripts/merge_lora.py --config {args.config} "
+            f"--checkpoint {final_checkpoint} --output {Path(args.output_dir) / 'merged'}"
+        )
 
 
 if __name__ == "__main__":
