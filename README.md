@@ -20,6 +20,8 @@ This repository contains the supported inference and fine-tuning code for SALMON
 - [Fine-tune](#fine-tune)
   - [Manifest](#manifest-format)
   - [Fine-tuning command](#fine-tuning-command)
+  - [Checkpoint layout](#checkpoint-layout)
+  - [Merging for inference](#merging-for-inference)
 
 
 ## Introduction
@@ -105,15 +107,27 @@ pip install 'accelerate>=1.0' 'deepspeed>=0.18'
 
 ### 3. Optional: install FlashAttention
 
-FlashAttention is not required. The portable default is PyTorch scaled-dot-product attention
-(`sdpa`). To use it, set this in the training configuration:
+FlashAttention is not required. `attn_implementation` in the training configuration selects the
+backend for the Qwen3 layers, where the attention cost is; the SPEAR encoder has its own attention
+either way. The portable default is PyTorch scaled-dot-product attention:
 
 ```json
 "attn_implementation": "sdpa"
 ```
 
-On a supported NVIDIA system, FlashAttention may provide better speed and memory use. Install it
-only after PyTorch is working:
+Note that `SalmonnForConditionalGeneration` itself does not declare support for alternative
+backends, so passing `attn_implementation` to `from_pretrained` raises. `scripts/train.py`
+therefore applies the setting to `model.base_llm` after loading. When loading the model yourself,
+do the same:
+
+```python
+model = AutoModelForCausalLM.from_pretrained(path, trust_remote_code=True, dtype=torch.bfloat16)
+model.base_llm.set_attn_implementation("sdpa")
+```
+
+The Qwen3 stack already resolves to `sdpa` on its own, so this is only needed to choose something
+else. On a supported NVIDIA system, FlashAttention may provide better speed and memory use. Install
+it only after PyTorch is working:
 
 ```bash
 pip install packaging psutil ninja
@@ -317,6 +331,50 @@ torchrun --nproc_per_node=8 scripts/train.py \
 
 Set `freeze_connector` to `true` if only the new Qwen3 LoRA adapter should be trained. DeepSpeed can
 be enabled by adding `"deepspeed": "configs/deepspeed_zero2.json"` to the `training` block.
+
+### Checkpoint layout
+
+Training writes only PEFT-nested checkpoints, which keep the base weights and the LoRA factors
+separate:
+
+```
+output/finetuned/
+├── checkpoint-1000/        resumable: weights, optimizer, scheduler
+├── checkpoint-2000/
+└── checkpoint-final/       weights only, written when training ends
+```
+
+Those key names are what `--resume_from_checkpoint` needs, but `from_pretrained` always rebuilds a
+plain Qwen3, so a nested checkpoint cannot be used for inference directly. Resume by adding
+`"resume_from_checkpoint": "output/finetuned/checkpoint-2000"` to the `training` block.
+`checkpoint-final` holds no optimizer state, so resume from a numbered checkpoint instead.
+
+### Merging for inference
+
+`scripts/merge_lora.py` folds the adapter into the base weights and rewrites the result with the
+released key names, so the output works with `scripts/infer.py`, `scripts/infer_batch.py`, and as
+`model_name_or_path` for a further round of fine-tuning:
+
+```bash
+python scripts/merge_lora.py \
+  --config configs/finetune.json \
+  --checkpoint output/finetuned/checkpoint-final \
+  --output output/finetuned/merged
+```
+
+Pass the same config the run was trained with: `lora_alpha` cannot be recovered from the weights.
+The rank is cross-checked against the stored tensor shapes, so a config from a different run is
+rejected rather than silently applying the wrong scaling. `--r` and `--lora_alpha` can be given
+directly instead of `--config`, which is how a checkpoint from an older run is converted.
+
+A checkpoint already carries `config.json` and the tokenizer, but not the remote code or
+`processor_config.json`, which exist only in the released checkpoint. `--base_model_path` supplies
+those; without it the merged model still loads through the installed `salmonn` package, but not
+with `trust_remote_code=True`. The script reloads the merged result and fails if any key is missing
+or unexpected.
+
+Any checkpoint can be merged, so intermediate ones can be evaluated without waiting for the run to
+finish.
 
 ## Citation
 
